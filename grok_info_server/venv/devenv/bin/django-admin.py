@@ -1,0 +1,5 @@
+#!/local2/mnt/workspace/charlie/scripts/grok_info_server/venv/devenv/bin/python3
+from django.core import management
+
+if __name__ == "__main__":
+    management.execute_from_command_line()

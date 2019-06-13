@@ -1,0 +1,23 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:	meta_auto_down
+# Required-Start: $network
+# Required-Stop: $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+### END INIT INFO
+
+start() {
+  /local2/mnt/workspace/charlie/scripts/meta_auto_downloader/meta_auto_down_init.sh
+}
+stop() {
+  /local2/mnt/workspace/charlie/scripts/meta_auto_downloader/meta_auto_down_stop.sh
+}
+
+case $1 in
+start|stop) $1;;
+restart) stop; start;;
+*) echo "Usage : $0 {start|stop|restart}"; exit 1;;
+esac
+exit 0
