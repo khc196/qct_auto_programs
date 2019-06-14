@@ -298,7 +298,7 @@ class Meta_Auto_Downloader:
         random.seed(os.getpid())
         while not self.__stop and not os.path.isfile('/var/log/meta_auto_down/meta.log'):
             now_hour = datetime.now(tz=self.tz).hour
-            if not now_hour == 23 or now_hour == 0:
+            if now_hour == 23 or now_hour == 0:
                 self.logger.log('message', 'It\'s time to start')
                 self.__search_meta__()
             time.sleep(600)
