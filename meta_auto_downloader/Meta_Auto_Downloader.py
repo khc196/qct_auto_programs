@@ -16,6 +16,7 @@ from filelock import FileLock
 from datetime import datetime
 import pytz
 from dateutil.tz import tzlocal
+import requests, yaml, json
 
 CUR_PATH='/local2/mnt/workspace'
 FINDBUILD='/prj/qct/asw/qctss/linux/ubuntu/14.04/bin/FindBuild'
@@ -30,90 +31,67 @@ WATCH_DIR=CUR_PATH+'/watch'
 WATCH_LIST=WATCH_DIR+'/watch_list.txt'
 
 META_LOG=WATCH_DIR+'/_meta_down_c.log'
+DB_URL = "https://automotive-linux:9999/db/"
 
 class Meta_Auto_Downloader:
     def __init__(self, log_file=META_LOG):
 	self.log_file = log_file
 	self.__stop = False
+        cmd = 'chmod 777 -R '+ log_file
+        proc = subprocess.Popen(cmd.split(), stdin=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 	self.logger = Logger('worker-{0}'.format(os.getpid()), self.log_file)
 	self.child = 0
         self.tz = tzlocal()
     def __search_meta__(self):
-	list = []
-	with FileLock(WATCH_LIST) as lock:
-            lock.__enter__()
-            f = open(lock.file_name, 'r')
-            list = f.readlines()
-            f.close()
-            lock.release()
-            for sp in list:
-                try :
-                    sp = sp.split()[0]
-                    self.logger.log('search_meta', {
-                        'sp': sp
-                    })
-		except :
-                    continue
-                proc = subprocess.Popen([FINDBUILD, sp+'-*', '-lo', '-com', '-se', '0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                (stdout, error) = proc.communicate()
-                self.logger.log('find_build', {
-                    'stdout' : stdout,
-                    'stderr' : error
-		})
-		lines = stdout.split('\n')
-		isNew = False
-		BUILD_ID = ""
-		BUILD_DATE = ""
-		LINUX_PATH = ""
-		for line in lines:
-                    if 'Build:' in line:
-                        isNew = False
-			isRegular = False
-			BUILD_ID = line.split()[1]
-			if '.c' not in sp and '.c' in BUILD_ID:
-                            BUILD_ID = ""
-                            continue
-                        META_MIN_OUTPUT=META_BUILD_ROOT+'/'+BUILD_ID
-                        if not os.path.isdir(META_MIN_OUTPUT):
-                            isNew = True
-                            self.logger.log('find_build', {
-                                'build_id': BUILD_ID,
-                                'status': 'new'
-                            })
-                        else:
-                            self.logger.log('find_build', {
-                                'build_id': BUILD_ID,
-                                'status': 'aleady_exists'
-                            })
-                            apps, plf_tag = self.__find_plf_tag__(BUILD_ID)
-                            try:
-                                if not apps == '':
-                                    f_plf = open(META_BUILD_ROOT+'/'+BUILD_ID+'/apps_plf_tag', 'w')
-                                    f_plf.write(apps+ '\n')
-                                    f_plf.write(plf_tag)
-                                    f_plf.close()
-                                    self.logger.log('find_plf_tag', {
-                                        'status': 'apps_plf_tag write done'
-                                    })
-                            except Exception as ex:
-                                self.logger.log('find_plf_tag', {
-                                    'status': 'apps_plf_tag write failed',
-                                    'sys_msg': str(ex)
-                                })
-                    if isNew and 'BuildDate:' in line:
-                        BUILD_DATE = line.split()[1]
-                        RELEASE_YEAR = BUILD_DATE.split()[0].split('/')[2]
-                        if(int(RELEASE_YEAR) < 2018):
-                            self.logger.log('find_plf_tag', {
-                                'status': 'It is old.'
-                            })
-                            isNew = False
-                    if isNew and 'LinuxPath:' in line:
-                        LINUX_PATH = line.split()[1]
-                        self.__copy_meta_min__(BUILD_ID, LINUX_PATH, META_MIN_OUTPUT)
+	sp_list = []
+	#with FileLock(WATCH_LIST) as lock:
+        #    lock.__enter__()
+        #    f = open(lock.file_name, 'r')
+        #    list = f.readlines()
+        #    f.close()
+        #    lock.release()
+        response = requests.get(DB_URL+'sp/', headers={"Content-Type": "application/json"}, verify=False)
+        sp_list = response.json()
+        for sp in sp_list:
+            sp = yaml.safe_load(json.dumps(sp))
+            self.logger.log('search_meta', {
+                'sp': sp['name']
+            })
+            sp = sp['name']
+            proc = subprocess.Popen([FINDBUILD, sp+'-*', '-lo', '-com', '-se', '0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, error) = proc.communicate()
+            self.logger.log('find_build', {
+                'stdout' : stdout,
+                'stderr' : error
+            })
+            lines = stdout.split('\n')
+            isNew = False
+            BUILD_ID = ""
+            BUILD_DATE = ""
+            LINUX_PATH = ""
+            for line in lines:
+                if 'Build:' in line:
+                    isNew = False
+                    isRegular = False
+                    BUILD_ID = line.split()[1]
+                    if '.c' not in sp and '.c' in BUILD_ID:
+                        BUILD_ID = ""
+                        continue
+                    META_MIN_OUTPUT=META_BUILD_ROOT+'/'+BUILD_ID
+                    if not os.path.isdir(META_MIN_OUTPUT):
+                        isNew = True
+                        self.logger.log('find_build', {
+                            'build_id': BUILD_ID,
+                            'status': 'new'
+                        })
+                    else:
+                        self.logger.log('find_build', {
+                            'build_id': BUILD_ID,
+                            'status': 'aleady_exists'
+                        })
                         apps, plf_tag = self.__find_plf_tag__(BUILD_ID)
                         try:
-                            if not apps == "":
+                            if not apps == '':
                                 f_plf = open(META_BUILD_ROOT+'/'+BUILD_ID+'/apps_plf_tag', 'w')
                                 f_plf.write(apps+ '\n')
                                 f_plf.write(plf_tag)
@@ -126,6 +104,32 @@ class Meta_Auto_Downloader:
                                 'status': 'apps_plf_tag write failed',
                                 'sys_msg': str(ex)
                             })
+                if isNew and 'BuildDate:' in line:
+                    BUILD_DATE = line.split()[1]
+                    RELEASE_YEAR = BUILD_DATE.split()[0].split('/')[2]
+                    if(int(RELEASE_YEAR) < 2018):
+                        self.logger.log('find_plf_tag', {
+                            'status': 'It is old.'
+                        })
+                        isNew = False
+                if isNew and 'LinuxPath:' in line:
+                    LINUX_PATH = line.split()[1]
+                    self.__copy_meta_min__(BUILD_ID, LINUX_PATH, META_MIN_OUTPUT)
+                    apps, plf_tag = self.__find_plf_tag__(BUILD_ID)
+                    try:
+                        if not apps == "":
+                            f_plf = open(META_BUILD_ROOT+'/'+BUILD_ID+'/apps_plf_tag', 'w')
+                            f_plf.write(apps+ '\n')
+                            f_plf.write(plf_tag)
+                            f_plf.close()
+                            self.logger.log('find_plf_tag', {
+                                'status': 'apps_plf_tag write done'
+                            })
+                    except Exception as ex:
+                        self.logger.log('find_plf_tag', {
+                            'status': 'apps_plf_tag write failed',
+                            'sys_msg': str(ex)
+                        })
     def __find_plf_tag__(self, BUILD_ID):
         if not os.path.isfile(META_BUILD_ROOT+'/'+BUILD_ID+'/'+'apps_plf_tag'):
             self.logger.log('find_plf_tag', {
