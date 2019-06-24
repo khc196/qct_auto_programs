@@ -11,6 +11,8 @@ from dateutil.tz import tzlocal
 META_WATCH = '/local2/mnt/workspace/watch'
 OPENGROK = '/var/opengrok'
 GROK_UPDATE_LOG=META_WATCH+'/grok_update.log'
+START_TIME = 5
+END_TIME = 6
 class Grok_Update:
     def __init__(self, log_file=GROK_UPDATE_LOG):
         self.log_file = log_file
@@ -34,7 +36,7 @@ class Grok_Update:
         random.seed(os.getpid())
         while not self.__stop and not os.path.isfile('/var/log/auto_repo/grok_update.log'):
             now_hour = datetime.now(tz=self.tz).hour
-            if now_hour == 5 or now_hour == 6:
+            if now_hour == START_TIME or now_hour == END_TIME:
                 self.logger.log('message', 'It\'s time to start')
                 self.work()
             time.sleep(600)

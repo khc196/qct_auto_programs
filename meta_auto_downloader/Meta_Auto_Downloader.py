@@ -33,6 +33,8 @@ WATCH_LIST=WATCH_DIR+'/watch_list.txt'
 META_LOG=WATCH_DIR+'/_meta_down_c.log'
 DB_URL = "https://automotive-linux:9999/db/"
 
+START_TIME = 23
+END_TIME = 0
 class Meta_Auto_Downloader:
     def __init__(self, log_file=META_LOG):
 	self.log_file = log_file
@@ -302,7 +304,7 @@ class Meta_Auto_Downloader:
         random.seed(os.getpid())
         while not self.__stop and not os.path.isfile('/var/log/meta_auto_down/meta.log'):
             now_hour = datetime.now(tz=self.tz).hour
-            if now_hour == 23 or now_hour == 0:
+            if now_hour == START_TIME or now_hour == END_TIME:
                 self.logger.log('message', 'It\'s time to start')
                 self.__search_meta__()
             time.sleep(600)

@@ -21,6 +21,8 @@ P4_SCRIPT = '/local2/mnt/workspace/charlie/scripts/opengrok_auto_upload/repo_and
 DB_URL = "https://automotive-linux:9999/db/"
 
 AUTO_REPO_LOG=META_WATCH+'/auto_repo.log'
+START_TIME = 2
+END_TIME = 3
 class Auto_Repo:
     def __init__(self, log_file=AUTO_REPO_LOG):
         self.log_file = log_file
@@ -298,7 +300,7 @@ class Auto_Repo:
         random.seed(os.getpid())
         while not self.__stop and not os.path.isfile('/var/log/auto_repo/auto_repo.log'):
             now_hour = datetime.now(tz=self.tz).hour
-            if now_hour == 2 or now_hour == 3:
+            if now_hour == START_TIME or now_hour == END_TIME:
                 self.logger.log('message', 'It\'s time to start')
                 self.work()
             time.sleep(600)
