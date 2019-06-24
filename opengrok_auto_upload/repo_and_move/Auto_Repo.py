@@ -7,6 +7,7 @@ from filelock import FileLock
 
 from datetime import datetime
 from dateutil.tz import tzlocal
+import requests, yaml, json
 
 META_WATCH = '/local2/mnt/workspace/watch'
 META_BUILD = '/local2/mnt/workspace/META_BUILD'
@@ -17,6 +18,7 @@ SRC_TEMP_PATH = '/local2/mnt/workspace/charlie/opengrok_temp'
 OPENGROK = '/var/opengrok'
 #OPENGROK_SRC = '/local2/mnt/workspace/charlie/opengrok_temp'
 P4_SCRIPT = '/local2/mnt/workspace/charlie/scripts/opengrok_auto_upload/repo_and_move/p4_script.sh'
+DB_URL = "https://automotive-linux:9999/db/"
 
 AUTO_REPO_LOG=META_WATCH+'/auto_repo.log'
 class Auto_Repo:
@@ -28,15 +30,22 @@ class Auto_Repo:
         self.tz = tzlocal()
     def __check_list(self):
         build_list = []
-        with open(GROK_LIST, 'r') as f:
-            sp_list = f.readlines()
-        sp_list = [x.strip() for x in sp_list]
         dirs = os.listdir(META_BUILD)
+        #with open(GROK_LIST, 'r') as f:
+        #    sp_list = f.readlines()
+        #sp_list = [x.strip() for x in sp_list]
+        #for sp in sp_list:
+        #    for build in dirs:
+        #        if sp + '-' in build:
+        #            build_list.append(build)
+        #            #dirs.remove(build)
+        response = requests.get(DB_URL+'sp/', headers={"Content-Type": "application/json"}, verify=False)
+        sp_list = response.json()
         for sp in sp_list:
+            sp = yaml.safe_load(json.dumps(sp))
             for build in dirs:
-                if sp + '-' in build:
+                if sp['name'] + '-' in build:
                     build_list.append(build)
-                    #dirs.remove(build)
         build_list = list(set(build_list))
         return build_list
     def __check_APPS_ID(self, build_name):
