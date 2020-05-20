@@ -12,7 +12,7 @@ configobj==4.7.2
 daemon==1.2
 dnspython==1.11.1
 html5lib==0.999
-httplib2==0.8
+httplib2==0.18.0
 itsdangerous==0.24
 lockfile==0.8
 oauthlib==0.6.1
