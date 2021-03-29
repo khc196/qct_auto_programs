@@ -4,7 +4,7 @@ Jinja2==2.10
 MarkupSafe==1.0
 Pillow==2.3.0
 PyYAML==5.1.1
-Pygments==1.6
+Pygments==2.7.4
 argparse==1.2.1
 click==6.7
 colorama==0.2.5
